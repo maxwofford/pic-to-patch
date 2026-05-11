@@ -27,5 +27,6 @@ COPY server.py worker.py ./
 ENV RESULTS_DIR=/data/results
 ENV VTRACER_BIN=vtracer
 
+ENV MODE=api
 EXPOSE 8000
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD sh -c 'if [ "$MODE" = "worker" ]; then rq worker patches --url "$REDIS_URL"; else uvicorn server:app --host 0.0.0.0 --port 8000; fi'
