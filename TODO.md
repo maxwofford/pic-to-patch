@@ -1,0 +1,5 @@
+- [ ] Option for square/rectangle background to patch vs kiss-cut patch
+- [ ] Option for background color
+- [ ] Contour-following border shape (instead of always rounded rectangle)
+- [ ] Rewrite in Go or Ruby (integration tests in tests/test_api.py define the contract)
+- [ ] Document attempts/ folder with an example output for each approach, then un-gitignore
