@@ -26,6 +26,10 @@ type QueuePayload struct {
 	BorderColor    string `json:"border_color"`
 	ColorPrecision int    `json:"color_precision"`
 	Postprocess    bool   `json:"postprocess"`
+	BackgroundColor string `json:"background_color,omitempty"`
+	PatchShape      string `json:"patch_shape,omitempty"`
+	OutputSize      int    `json:"output_size,omitempty"`
+	StitchDensity   int    `json:"stitch_density,omitempty"`
 }
 
 func main() {
@@ -88,6 +92,19 @@ func handleCreatePatch(w http.ResponseWriter, r *http.Request) {
 		postprocess = v != "false" && v != "0" && v != "no"
 	}
 
+	backgroundColor := r.FormValue("background_color")
+	patchShape := r.FormValue("patch_shape")
+
+	outputSize := 0
+	if v := r.FormValue("output_size"); v != "" {
+		outputSize, _ = strconv.Atoi(v)
+	}
+
+	stitchDensity := 0
+	if v := r.FormValue("stitch_density"); v != "" {
+		stitchDensity, _ = strconv.Atoi(v)
+	}
+
 	jobID := uuid.New().String()
 	ctx := context.Background()
 
@@ -101,10 +118,14 @@ func handleCreatePatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := QueuePayload{
-		JobID:          jobID,
-		BorderColor:    borderColor,
-		ColorPrecision: colorPrecision,
-		Postprocess:    postprocess,
+		JobID:           jobID,
+		BorderColor:     borderColor,
+		ColorPrecision:  colorPrecision,
+		Postprocess:     postprocess,
+		BackgroundColor: backgroundColor,
+		PatchShape:      patchShape,
+		OutputSize:      outputSize,
+		StitchDensity:   stitchDensity,
 	}
 	payloadJSON, _ := json.Marshal(payload)
 

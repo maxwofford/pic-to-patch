@@ -1,6 +1,17 @@
-# Stage 1: download and strip inkstitch
-FROM python:3.11-slim AS builder
+# Stage 1: build Go binary
+FROM golang:1.26-alpine AS go-builder
+WORKDIR /src
+COPY worker/go.mod worker/go.sum ./
+RUN go mod download
+COPY worker/*.go ./
+RUN CGO_ENABLED=0 go build -o /worker .
 
+# Stage 2: build vtracer from Rust source
+FROM rust:1-slim AS rust-builder
+RUN cargo install vtracer
+
+# Stage 3: download and strip inkstitch
+FROM debian:trixie-slim AS inkstitch-builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget xz-utils ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -22,21 +33,16 @@ RUN ARCH=$(dpkg --print-architecture) && \
            /opt/inkstitch/inkstitch/symbols \
            /opt/inkstitch/inkstitch/dbus
 
-# Stage 2: runtime
-FROM python:3.11-slim
+# Stage 4: runtime (no Python!)
+FROM debian:trixie-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     inkscape libwayland-cursor0 libdrm2 libgbm1 libxcb-dri3-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /opt/inkstitch /opt/inkstitch
+COPY --from=go-builder /worker /usr/local/bin/worker
+COPY --from=rust-builder /usr/local/cargo/bin/vtracer /usr/local/bin/vtracer
+COPY --from=inkstitch-builder /opt/inkstitch /opt/inkstitch
 ENV INKSTITCH_BIN=/opt/inkstitch/inkstitch/bin/inkstitch
 
-WORKDIR /app
-COPY worker/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY worker/pipeline/ pipeline/
-COPY worker/worker.py .
-
-CMD ["python", "worker.py"]
+CMD ["worker"]
